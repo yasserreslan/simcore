@@ -17,6 +17,7 @@ namespace SimCore.Sim;
 public sealed partial class World
 {
     private const int HoldPicksPerTick = 2; // squads whose cells are picked in one squad pass, in ID order; the rest wait a tick
+    private const int HoldZoneRepickTicks = 20; // INF-E1b-10 (14.4): a squad re-picks away from a zone at most once a second
     private const int HoldEnterTicks = 20; // a garrison pick's member tries his building again every second (phased by ID)
 
     private int _holdPicks; // squads picked this tick
@@ -323,8 +324,32 @@ public sealed partial class World
             PickHold(r, s, hold);
             return;
         }
+        if (s.Mind is { } m && Tick < m.ImpactUntil && Tick >= s.ZoneRepickAt && HoldPicksZoned(s))
+        {
+            s.ZoneRepickAt = Tick + HoldZoneRepickTicks; // INF-E1b-10 (14.4): the zone covers half or more of its positions: it re-picks
+            StartHoldPick(s, hold);
+            return;
+        }
         HoldMembers(s, null);
     }
+
+    // HoldPicksZoned (14.4): an impact zone covers half or more of the squad's positions (its picks; a building's are its door cells).
+    private bool HoldPicksZoned(Squad s)
+    {
+        int n = 0, zoned = 0;
+        foreach (var p in s.PickList)
+        {
+            if (Unit(p.Unit) is { } u && Able(u))
+            {
+                n++;
+                zoned += ZoneValue(p.Cell) > 0 ? 1 : 0;
+            }
+        }
+        return n > 0 && zoned * 2 >= n;
+    }
+
+    // ZoneAvoided (14.4): while the squad is under indirect fire (its first impact's time), its picks avoid the danger zones.
+    private bool ZoneAvoided(Squad s, Cell c) => s.Mind is { } m && Tick < m.ImpactUntil && ZoneValue(c) > 0;
 
     // HoldMembers: a placed squad's idle members hold their positions: one whose pick is a building goes in when he may (every
     // second, phased by ID), a set-up weapon (the mortar) sets up on its cell (facing aim first, when given: an ambush's zone).
@@ -740,7 +765,7 @@ public sealed partial class World
                 continue;
             }
             looked++;
-            if (Grid.At(c) != Terrain.Clear || (k >= 0 && (!r.Passable(k, r.Index(c)) || (comp != 0 && r.Component(k, r.Index(c)) != comp))))
+            if (Grid.At(c) != Terrain.Clear || (k >= 0 && (!r.Passable(k, r.Index(c)) || (comp != 0 && r.Component(k, r.Index(c)) != comp))) || ZoneAvoided(s, c))
             {
                 continue;
             }

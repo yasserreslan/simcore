@@ -80,6 +80,11 @@ internal static partial class BattleBench
             Bounding(seeds, Match, maxTicks, true); // part 1's staging, for comparison (row 1292)
             return 0;
         }
+        if (name == "16")
+        {
+            VehicleScene(seeds, Match, maxTicks); // INF-E1b-10: scene 16 alone
+            return 0;
+        }
         if (name == "think")
         {
             // INF-E1b-2's scenes, one after another.
@@ -91,7 +96,7 @@ internal static partial class BattleBench
             DitherScene(seeds, Match, maxTicks);
             return 0;
         }
-        Console.Error.WriteLine($"bench-battle: unknown scene \"{name}\" (1, 2, 3, 34, think, 20, 500, support, houses, cover, cover=<map dir>)");
+        Console.Error.WriteLine($"bench-battle: unknown scene \"{name}\" (1, 2, 3, 34, think, 16, 20, 500, support, houses, cover, cover=<map dir>)");
         return 2;
     }
 

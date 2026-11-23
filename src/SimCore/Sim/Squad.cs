@@ -360,6 +360,9 @@ public sealed class Squad
     // Whether its cells wait to be picked (a squad pass picks them: a few squads a tick).
     internal bool HoldPending { get; set; }
 
+    // INF-E1b-10 (14.4): the squad re-picked its Hold cells away from an impact zone; not again before this tick.
+    internal uint ZoneRepickAt { get; set; }
+
     internal List<HoldPick> PickList { get; } = []; // sorted by unit ID, ascending
 
     /// <summary>The members' Hold positions (by unit ID, ascending): empty until placed.</summary>

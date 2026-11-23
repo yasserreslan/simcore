@@ -207,6 +207,10 @@ public sealed class SoldierFight
     /// <summary>Beyond the reach of every dangerous contact he knows (7.3's first exception), as of his last think.</summary>
     public bool OutOfReach { get; internal set; }
 
+    /// <summary>INF-E1b-10 (7.3): backing away in reach with a main arm that can't fire on the move, for more than sidearmTicks: he
+    /// holds his sidearm until the move ends.</summary>
+    public bool BackArm { get; internal set; }
+
     /// <summary>Sprinting since this tick (0: not); no sprint again before SprintRest.</summary>
     public uint SprintFrom { get; internal set; }
 
@@ -353,7 +357,7 @@ public sealed class SoldierFight
     internal void HashThink(ref WordHash h)
     {
         h.Put4((ulong)(byte)(Face + 1) | ((ulong)(byte)MoveFacing << 8) | ((ulong)Gait << 16) | (OutOfReach ? 1UL << 24 : 0) | (HasSpot ? 1UL << 25 : 0) |
-            (SpotMoving ? 1UL << 26 : 0) | (SearchWaits ? 1UL << 27 : 0) | (Reflex ? 1UL << 28 : 0) | (BackingOff ? 1UL << 29 : 0) | (ReloadSpot ? 1UL << 30 : 0) | (ReloadLooked ? 1UL << 31 : 0) | ((ulong)(Forced is { } fp ? (byte)fp + 1 : 0) << 32),
+            (SpotMoving ? 1UL << 26 : 0) | (SearchWaits ? 1UL << 27 : 0) | (Reflex ? 1UL << 28 : 0) | (BackingOff ? 1UL << 29 : 0) | (ReloadSpot ? 1UL << 30 : 0) | (ReloadLooked ? 1UL << 31 : 0) | ((ulong)(Forced is { } fp ? (byte)fp + 1 : 0) << 32) | (BackArm ? 1UL << 40 : 0),
             unchecked((ulong)TurnLeft), SprintFrom, SprintRest);
         h.Put4(unchecked((ulong)(((long)Spot.X << 20) ^ (Spot.Y & 0xFFFFF))), SpotSince, LastSearch, unchecked((ulong)SearchExposure));
         h.Put4(unchecked((ulong)(((long)Unreachable.X << 20) ^ (Unreachable.Y & 0xFFFFF))), UnreachableUntil, FireAt, unchecked((ulong)BurstLeft));
@@ -569,6 +573,9 @@ public sealed class SquadMind
     internal bool HoldBack { get; set; } // INF-HELP-2 (13.2's holdAnswers): it answered from Hold mode: the help over, it holds its spot again
     internal Cell HoldToward { get; set; } // and the way it held it faced (its Hold order's toward: HelpFrom is the spot)
 
+    /// <summary>INF-E1b-10 (13.5): the friendly vehicle that answered this call (0: none); one a call, while the call is open.</summary>
+    public uint CallVehicle { get; internal set; }
+
     // ---- INF-E1b-4 part 3: indirect fire and air (14.4) ----
 
     /// <summary>Under indirect fire or an air attack (14.4): its men keep fireSpacing apart until this tick.</summary>
@@ -587,7 +594,7 @@ public sealed class SquadMind
             unchecked((ulong)(((long)HelpTo.X << 20) ^ (HelpTo.Y & 0xFFFFF)) ^ ((ulong)(((long)HelpFrom.X << 20) ^ (HelpFrom.Y & 0xFFFFF)) << 40)),
             unchecked((ulong)(((long)CallAt.X << 20) ^ (CallAt.Y & 0xFFFFF))) ^ ((ulong)CallSeen << 40));
         h.Put4(unchecked((ulong)FThem), unchecked((ulong)FUs), LossTicks[0] | ((ulong)LossTicks[1] << 32), LossTicks[2] | ((ulong)StandDownUntil << 32));
-        h.Put4(NotCall | ((ulong)NotCallUntil << 32), unchecked((ulong)HelpFacing.X.Raw), unchecked((ulong)HelpFacing.Y.Raw), 0x1CB8);
+        h.Put4(NotCall | ((ulong)NotCallUntil << 32), unchecked((ulong)HelpFacing.X.Raw), unchecked((ulong)HelpFacing.Y.Raw), 0x1CB8UL | ((ulong)CallVehicle << 32));
         h.Put4(SpreadUntil | ((ulong)ImpactUntil << 32), unchecked((ulong)(((long)ImpactAt.X << 20) ^ (ImpactAt.Y & 0xFFFFF))), 0x1CB9,
             unchecked((ulong)(((long)HelpGroupAt.X << 20) ^ (HelpGroupAt.Y & 0xFFFFF))) ^ ((ulong)HelpPickTick << 40));
         h.Put4((Resume ? 1UL : 0) | (HoldBack ? 2UL : 0), unchecked((ulong)(((long)ResumeGoal.X << 20) ^ (ResumeGoal.Y & 0xFFFFF))), 0x1CBA,

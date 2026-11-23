@@ -164,7 +164,8 @@ public sealed partial class World
             {
                 (a.InHand, a.SwitchTo, a.SwitchLeft) = (a.SwitchTo, -1, 0);
             }
-            if (a.Reloading >= 0 && !(u.Fight is { ReloadSpot: true, SpotMoving: true } && (u.Moving || u.PathPending)) && --a.ReloadLeft <= 0) // (15.6: to his reload spot first)
+            if (a.Reloading >= 0 && !(u.Fight is { ReloadSpot: true, SpotMoving: true } && (u.Moving || u.PathPending)) &&
+                !(u.Moving && u.Fight is { Gait: Gait.Run or Gait.Sprint or Gait.CrouchRun }) && --a.ReloadLeft <= 0) // (15.6: to his reload spot first; INF-E1b-10, 7.4: not running)
             {
                 var rw = weapons[a.Reloading];
                 a.MutableMag[a.Reloading] = Math.Min(rw.Effect.Magazine, rw.Stock >= 0 ? u.Charges[rw.Stock] : rw.Effect.Magazine);
@@ -241,7 +242,7 @@ public sealed partial class World
             }
             var e = main.Effect;
             var within = SwitchWithin(e);
-            if (!mainAmmo || OrderNeedsSidearm(u, main, side) || (within.Raw > 0 && EnemyInfantryNear(u, within)) ||
+            if (!mainAmmo || OrderNeedsSidearm(u, main, side) || u.Fight is { BackArm: true } || (within.Raw > 0 && EnemyInfantryNear(u, within)) ||
                 (a.Reloading == 0 && e.SwitchReloadingWithin.Raw > 0 && EnemyInfantryNear(u, e.SwitchReloadingWithin)))
             {
                 (a.SwitchTo, a.SwitchLeft, a.Calm) = (u.Def.Sidearm, side.Effect.DrawTicks, 0);
@@ -250,7 +251,8 @@ public sealed partial class World
         }
         var back = Fixed.FromRaw(Math.Max(SwitchWithin(main.Effect).Raw, main.Effect.SwitchReloadingWithin.Raw) + Fixed.OneRaw);
         a.Calm = EnemyInfantryNear(u, back) ? 0 : Math.Min(CalmMax, a.Calm + 1);
-        if (mainAmmo && (a.Calm >= CalmTicks || !HasAmmo(u, side)) && (!OrderNeedsSidearm(u, main, side) || !HasAmmo(u, side)))
+        if (mainAmmo && (a.Calm >= CalmTicks || !HasAmmo(u, side)) && (!OrderNeedsSidearm(u, main, side) || !HasAmmo(u, side)) &&
+            !(u.Fight is { BackArm: true } && HasAmmo(u, side))) // (7.3: backing away, he keeps it until the move ends)
         {
             (a.SwitchTo, a.SwitchLeft) = (0, side.Effect.DrawTicks);
         }

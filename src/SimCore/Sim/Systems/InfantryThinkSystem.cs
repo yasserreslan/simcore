@@ -479,7 +479,26 @@ public sealed partial class World
         {
             pct = pct * r[CombatValue.GaitLmgSpeed] / 100;
         }
+        if (u.Arms is { Reloading: >= 0 } && f.Gait is Gait.Walk or Gait.Strafe or Gait.Backpedal && !(f.ReloadSpot && f.SpotMoving))
+        {
+            pct = pct * r[CombatValue.GaitReloadMove] / 100; // INF-E1b-10 (7.4): he changes his magazine walking, at half the gait's pace
+        }
+        f.BackArm = f.Gait == Gait.Backpedal && (f.BackArm || BacksAwayLong(u, pct, r));
         return pct;
+    }
+
+    // BacksAwayLong (7.3, INF-E1b-10): his main arm can't fire on the move (marksman, launcher, crew weapon), he has a sidearm the
+    // player lets him use, and his move away inside the enemy's reach lasts more than sidearmTicks at this pace: he draws it first
+    // (ArmsSystem's SwitchArms) and backpedals firing it. A shorter move keeps his main arm, silent.
+    private static bool BacksAwayLong(Unit u, int pct, InfantryCombatRules r)
+    {
+        if (u.Def.Sidearm < 0 || u.WeaponMode == WeaponMode.PrimaryOnly || u.Def.Weapons.Count == 0 ||
+            r.Weapon(u.Def.Weapons[0].Effect)?.Class is not (CombatClass.Marksman or CombatClass.Launcher or CombatClass.Crew))
+        {
+            return false;
+        }
+        var far = u.Def.Speed.Raw * pct / 100 * r[CombatValue.FaceSidearmTicks];
+        return (u.Dest.Center() - u.Pos).LenSq() > far * far;
     }
 
     // FacesMove: the body turns with the move (out of contact, a run, a dash, a crawl) or keeps to his facing (walk, strafe, backpedal).
@@ -493,7 +512,7 @@ public sealed partial class World
         {
             return false;
         }
-        var cls = r.Weapon(u.Def.Weapons[0].Effect)?.Class ?? CombatClass.Unknown;
+        var cls = r.Weapon(u.Def.Weapons[u.Arms is { InHand: > 0 and var ih } && ih < u.Def.Weapons.Count ? ih : 0].Effect)?.Class ?? CombatClass.Unknown; // (7.3: his sidearm, drawn)
         return cls is not (CombatClass.Marksman or CombatClass.Launcher or CombatClass.Crew or CombatClass.Unknown) &&
             !(cls == CombatClass.Lmg && f.Gait == Gait.Backpedal);
     }
@@ -531,7 +550,7 @@ public sealed partial class World
     {
         if (!Walking(u))
         {
-            f.Gait = Gait.None;
+            (f.Gait, f.BackArm) = (Gait.None, false); // (7.3: the move away over, his sidearm goes back by the usual rule)
         }
         if (TracksAir(u))
         {
@@ -1072,6 +1091,10 @@ public sealed partial class World
         if (u.Squad == 0 || Squad(u.Squad) is not { Mode: SquadMode.Hold or SquadMode.Ambush } s)
         {
             return true;
+        }
+        if (s is { Mode: SquadMode.Hold, Loose: false } && Content.Squad?.Hold is not null)
+        {
+            return false; // INF-E1b-10 (14.4): a Hold squad re-picks its positions within its radius away from the zone (RunHold), he goes to his
         }
         int n = 0, zoned = 0;
         foreach (var id in s.MemberList)

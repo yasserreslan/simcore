@@ -177,7 +177,7 @@ internal static partial class BattleBench
     private static void VehicleScene(int seeds, Func<ulong, CompiledMatch> match, uint maxTicks)
     {
         Console.WriteLine($"== scene 16, moving with a vehicle: an infantry carrier and a squad move together into contact ({seeds} seeds)");
-        long ticks = 0, covered = 0, ahead = 0, movingShots = 0;
+        long ticks = 0, covered = 0, ahead = 0, movingShots = 0, following = 0, near = 0, slow = 0, ordered = 0; // (INF-E1b-10: the why)
         foreach (var seed in Seeds(seeds))
         {
             var m = match(seed);
@@ -223,6 +223,10 @@ internal static partial class BattleBench
                     }
                     ticks++;
                     covered += w.VehicleCover(Cell.Of(u.Pos), axis, u.Owner, r) != CoverKind.None ? 1 : 0;
+                    following += f.Vehicle == v ? 1 : 0;
+                    near += (veh.Pos - u.Pos).LenSq() <= 16L * Fixed.OneRaw * Fixed.OneRaw ? 1 : 0;
+                    slow += veh.Moving && veh.DriveSpeed.Raw * 100 <= veh.Def.Speed.Raw * r[CombatValue.VehicleCoverSpeedPercent] ? 1 : 0;
+                    ordered += u.Order.Kind is OrderKind.Move or OrderKind.AttackMove ? 1 : 0;
                     ahead += u.Pos.X.Raw > veh.Pos.X.Raw + Fixed.OneRaw ? 1 : 0;
                 }
             }
@@ -230,6 +234,7 @@ internal static partial class BattleBench
         Console.WriteLine(string.Create(Inv, $"PASS-LINE the vehicle covers the soldier from the squad's axis in 90%+ of soldier-ticks in contact: {(ticks == 0 ? 0 : 100.0 * covered / ticks):0.0}% of {ticks}: {(ticks > 0 && covered * 10 >= ticks * 9 ? "met" : "NOT MET")}"));
         Console.WriteLine($"PASS-LINE soldiers fire while walking: {movingShots} shots on the move: {(movingShots > 0 ? "met" : "NOT MET")}");
         Console.WriteLine($"PASS-LINE none is ahead of the vehicle's nose: {ahead} soldier-ticks: {(ahead == 0 ? "met" : "NOT MET")}");
+        Console.WriteLine($"REPORT of {ticks} soldier-ticks in contact: following the vehicle (7.6) {following}, within 4 cells of it {near}, the vehicle moving under speedPercent {slow}, the man under a Move or Attack-move {ordered}");
     }
 
     // Scene 27: 6 blue riflemen in a squad against 6 red in a squad, 4 cells apart, holding their ground.

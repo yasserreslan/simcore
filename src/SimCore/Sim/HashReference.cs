@@ -999,7 +999,7 @@ public sealed partial class World
                     h.PutSigned(s.OrderFacing.Y.Raw);
                 }
                 // Hold (phase S2): the spot, the facing and the threat, whether placed or waiting, and the picks.
-                h.Put((s.HoldPlaced ? 1UL : 0) | (s.HoldPending ? 2UL : 0) | (s.HoldFaced ? 4UL : 0));
+                h.Put((s.HoldPlaced ? 1UL : 0) | (s.HoldPending ? 2UL : 0) | (s.HoldFaced ? 4UL : 0) | ((ulong)s.ZoneRepickAt << 8));
                 h.PutSigned(s.HoldSpot.X);
                 h.PutSigned(s.HoldSpot.Y);
                 h.PutSigned(s.HoldFacing.X.Raw);

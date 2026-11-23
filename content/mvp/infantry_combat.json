@@ -78,9 +78,10 @@
       "sprintRest": 200, "lmgSpeed": 85, "lmgHipAim": 70, "reloadMove": 50, "riseMove": 60 },
     // 7.1, 7.3: advance within 4 steps of the 32 (45 deg), strafe up to 12 (135 deg), backpedal beyond; a run in contact only within
     // 9 steps (100 deg) of the axis; a turn over 90 deg (8 facings) takes 8 ticks without firing; the body faces contacts of danger
-    // 10+; out of reach beyond 120% of their range, or nobody spotted him for 40 ticks.
+    // 10+; out of reach beyond 120% of their range, or nobody spotted him for 40 ticks. INF-E1b-10 (7.3): a man whose main arm can't
+    // fire on the move (marksman, launcher, crew weapon) backing away in reach for more than sidearmTicks draws his sidearm first.
     "facing": { "advanceSteps": 4, "backSteps": 12, "runSteps": 9, "bigTurn": 8, "bigTurnTicks": 8, "faceDanger": 10, "outOfReachPercent":
-      120, "unspottedTicks": 40 },
+      120, "unspottedTicks": 40, "sidearmTicks": 20 },
     // 6: the worth-it rule (a 15% gain), the dash limits (3 s under fire, 6 s in contact, 10 s out of it), the horizons by the
     // squad's choice (E1b-3 sets the choice; today: fight in place 300, loose 200, alert 300), shaken x80%, wounded x120%; the
     // candidates (cover facing the axis within 5 steps, or concealment) within 4, 6 or 8 cells, at most 16, a flood of at most 240
@@ -205,7 +206,13 @@
       "aggressivePercent": 150,
       // INF-HELP-2 (13.2 as written): a squad in Hold mode answers a call within holdReach of its Hold spot when U is holdUrgency or
       // more (holdAnswers on), and holds its spot again after; a loose soldier answers calls within looseRadius.
-      "holdAnswers": 1, "holdReach": 100, "holdUrgency": 60, "looseRadius": 120 },
+      "holdAnswers": 1, "holdReach": 100, "holdUrgency": 60, "looseRadius": 120,
+      // INF-E1b-10 (13.5): a friendly ground vehicle with no order, on Guard or Aggressive, with a weapon that hurts the call's
+      // enemy, answers a call of U vehicleUrgency or more within vehicleRadius: it attack-moves 4 to 6 cells behind the caller's line,
+      // 3 cells to its side, and fights there by its own AI; one a call. Against armour only a vehicle with a weapon of vehicleArmour%
+      // or more against armoured vehicles (a tank, an IFV with a missile). vehicleAnswers 0 switches it off.
+      "vehicleAnswers": 1, "vehicleRadius": 200, "vehicleUrgency": 60, "vehicleBackMin": 40, "vehicleBackMax": 60, "vehicleSide": 30,
+      "vehicleArmour": 50 },
     // INF-E1b-4 part 3: 14.4 (the first impact of indirect fire within 6 cells marks the squad: its men keep 2 cells apart while it
     // lasts; an air attack run seen within 10 cells: men in the open go prone for 10 s and the squad spreads to 2 cells); 12.4 (a routing
     // man fired on from within 3 cells who can't run, pinned hard at 90+ or with no way, drops prone and stops firing; part 4: a loose

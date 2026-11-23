@@ -48,7 +48,7 @@ public sealed partial class World
         }
     }
 
-    private static void WithdrawCall(SquadMind m) => (m.Calling, m.Urgency, m.CallArmour, m.FlankRefused) = (false, 0, false, false);
+    private static void WithdrawCall(SquadMind m) => (m.Calling, m.Urgency, m.CallArmour, m.FlankRefused, m.CallVehicle) = (false, 0, false, false, 0);
 
     // RefreshCall (13.1), at each squad think in contact after the force ratio: U from the table, clamped 0 to 100. A helper makes none
     // (help doesn't call for help) unless it is in contact beyond otherFight from its caller with an enemy group beyond otherFight of the
@@ -200,7 +200,106 @@ public sealed partial class World
                     count++;
                 }
             }
+            if (r[CombatValue.CaVehicleAnswers] != 0 && cm.Urgency >= r[CombatValue.CaVehicleUrgency] && (cm.CallVehicle == 0 || Unit(cm.CallVehicle) is not { Alive: true }))
+            {
+                AnswerVehicle(c, cm, r); // INF-E1b-10 (13.5)
+            }
         }
+    }
+
+    // AnswerVehicle (13.5, INF-E1b-10): the nearest free friendly ground vehicle within vehicleRadius of the call (ties: ID) answers it:
+    // it attack-moves to a cell vehicleBackMin to vehicleBackMax behind the caller's line, vehicleSide to its own side of the axis, and
+    // fights there by its own AI (its stance's leash). One a call; it is the call's while the call is open.
+    private void AnswerVehicle(Squad c, SquadMind cm, InfantryCombatRules r)
+    {
+        var radius = (long)r[CombatValue.CaVehicleRadius] * Fixed.OneRaw / 10;
+        Unit? best = null;
+        var bestD = radius * radius + 1;
+        foreach (var v in _units)
+        {
+            if (v.Fight is not null || v.Owner != c.Owner || (v.Pos - cm.CallAt.Center()).LenSq() is var d && d >= bestD || !FreeVehicle(v, cm, r))
+            {
+                continue;
+            }
+            (best, bestD) = (v, d);
+        }
+        if (best is null)
+        {
+            return;
+        }
+        var cc = cm.CallAt;
+        var axis = cm.Axis >= 0 ? cm.Axis : cm.GroupCount > 0 ? Dir32(cm.GroupAt.X - cc.X, cm.GroupAt.Y - cc.Y) : -1;
+        if (axis < 0)
+        {
+            return;
+        }
+        Cell Point(int dir, long len, Cell from)
+        {
+            var (dx, dy) = Directions[dir & 31];
+            return Cell.Of(new Vec(Fixed.FromRaw(from.Center().X.Raw + dx * len / 1024), Fixed.FromRaw(from.Center().Y.Raw + dy * len / 1024)));
+        }
+        var (ax, ay) = Directions[axis];
+        var vc = Cell.Of(best.Pos);
+        var side = (long)ax * (vc.Y - cc.Y) - (long)ay * (vc.X - cc.X) >= 0 ? 8 : -8; // (its own side of the caller's axis)
+        var to = Point(axis + 16, (long)r[CombatValue.CaVehicleBackMin] * Fixed.OneRaw / 10, cc);
+        for (var len = r[CombatValue.CaVehicleBackMin]; len <= r[CombatValue.CaVehicleBackMax]; len += 10)
+        {
+            var p = Point(axis + side, (long)r[CombatValue.CaVehicleSide] * Fixed.OneRaw / 10, Point(axis + 16, (long)len * Fixed.OneRaw / 10, cc));
+            if (Grid.Contains(p) && Grid.At(p) == Terrain.Clear)
+            {
+                to = p;
+                break;
+            }
+        }
+        if (!Grid.Contains(to))
+        {
+            return;
+        }
+        LooseOrder(best, to, OrderKind.AttackMove);
+        cm.CallVehicle = best.Id;
+        _squadEvents.Add(new SquadEvent(0, best.Owner, SquadEventKind.Support, best.Id, c.Id)); // its "moving to support" alert, as a loose helper's
+    }
+
+    // FreeVehicle (13.5): a ground vehicle (not a soldier, a structure or an aircraft) able to act, not aboard anything, with no order of
+    // the player, on Guard or Aggressive, not another open call's, with a weapon that hurts the call's enemy: its soldiers, or against
+    // armour (the call asks for anti-armour) a weapon of vehicleArmour% or more against armoured vehicles (a tank, an IFV's missile).
+    private bool FreeVehicle(Unit v, SquadMind cm, InfantryCombatRules r)
+    {
+        if (!v.Alive || !v.CanAct || v.Inside != 0 || v.Def.Archetype.Flight is not null || v.Order.Kind != OrderKind.Idle ||
+            v.Stance is not (Stance.Guard or Stance.Aggressive) || !IsVehicle(v))
+        {
+            return false;
+        }
+        foreach (var o in _calls)
+        {
+            if (o.Mind!.CallVehicle == v.Id)
+            {
+                return false;
+            }
+        }
+        var armour = cm.CallArmour;
+        var idx = IndexOfArmor(armour ? "armored_vehicle" : "infantry");
+        foreach (var w in v.Def.Weapons)
+        {
+            if (idx >= 0 && (w.Effect.Targets & Layers.Ground) != 0 && w.Warhead.Versus[idx] is var vs && (armour ? vs >= r[CombatValue.CaVehicleArmour] : vs > 0))
+            {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private int IndexOfArmor(string name)
+    {
+        var list = Content.ArmorClasses;
+        for (var i = 0; i < list.Count; i++)
+        {
+            if (list[i] == name)
+            {
+                return i;
+            }
+        }
+        return -1;
     }
 
     // NearestHelper (13.2): the nearest free squad (straight distance from its centre to the call's; ties by ID) of the caller's player.

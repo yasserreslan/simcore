@@ -304,6 +304,8 @@ public enum CombatValue
     FaceOutOfReachPercent,
     /// <summary>infantryCombat.facing.unspottedTicks</summary>
     FaceUnspottedTicks,
+    /// <summary>infantryCombat.facing.sidearmTicks</summary>
+    FaceSidearmTicks,
     /// <summary>infantryCombat.position.gainNeeded</summary>
     PosGainNeeded,
     /// <summary>infantryCombat.position.dashFire</summary>
@@ -908,6 +910,20 @@ public enum CombatValue
     CaHoldUrgency,
     /// <summary>infantryCombat.calls.looseRadius</summary>
     CaLooseRadius,
+    /// <summary>infantryCombat.calls.vehicleAnswers</summary>
+    CaVehicleAnswers,
+    /// <summary>infantryCombat.calls.vehicleRadius</summary>
+    CaVehicleRadius,
+    /// <summary>infantryCombat.calls.vehicleUrgency</summary>
+    CaVehicleUrgency,
+    /// <summary>infantryCombat.calls.vehicleBackMin</summary>
+    CaVehicleBackMin,
+    /// <summary>infantryCombat.calls.vehicleBackMax</summary>
+    CaVehicleBackMax,
+    /// <summary>infantryCombat.calls.vehicleSide</summary>
+    CaVehicleSide,
+    /// <summary>infantryCombat.calls.vehicleArmour</summary>
+    CaVehicleArmour,
     /// <summary>infantryCombat.reactions.impactNear</summary>
     ReImpactNear,
     /// <summary>infantryCombat.reactions.fireSpacing</summary>
@@ -1080,6 +1096,7 @@ public static class CombatNames
         "facing.faceDanger",
         "facing.outOfReachPercent",
         "facing.unspottedTicks",
+        "facing.sidearmTicks",
         "position.gainNeeded",
         "position.dashFire",
         "position.dashContact",
@@ -1382,6 +1399,13 @@ public static class CombatNames
         "calls.holdReach",
         "calls.holdUrgency",
         "calls.looseRadius",
+        "calls.vehicleAnswers",
+        "calls.vehicleRadius",
+        "calls.vehicleUrgency",
+        "calls.vehicleBackMin",
+        "calls.vehicleBackMax",
+        "calls.vehicleSide",
+        "calls.vehicleArmour",
         "reactions.impactNear",
         "reactions.fireSpacing",
         "reactions.airNear",
