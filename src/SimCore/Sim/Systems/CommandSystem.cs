@@ -990,6 +990,18 @@ public sealed partial class World
             }
             return;
         }
+        if (def is { IsStructure: true, Archetype: { Production: not null } fa } && CanTurn(fa) && c.Facing != 0)
+        {
+            // A factory turned by the command's facing (BUILD-ROTATE: 8 front west, 16 north, 24 east; any other places nothing)
+            // goes exactly where asked (the top-left cell of its footprint as it stands) if that footprint is free. Without a
+            // facing (0) it goes as before, below.
+            var fq = QuarterOf(c.Facing);
+            if (fq > 0 && FootprintFree(def, c.Cell, fq))
+            {
+                Spawn(def, c.Cell, c.Player == 1 ? FixedPoint.Facing.East : FixedPoint.Facing.West, fq);
+            }
+            return;
+        }
         if (def is null || def.Strike is not null || !Grid.TrySpiral(c.Cell, 0, out var cell))
         {
             return;

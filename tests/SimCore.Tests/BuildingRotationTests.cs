@@ -307,7 +307,8 @@ public class BuildingRotationTests
         var p = w.Player(1)!.Setup;
         Assert.Throws<ArgumentOutOfRangeException>(() => w.Spawn(p.Find(w.Content, "house_small")!, new Cell(5, 5), 0, 4));
         Assert.Throws<ArgumentOutOfRangeException>(() => w.Spawn(p.Find(w.Content, "house_small")!, new Cell(5, 5), 0, -1));
-        Assert.Throws<ArgumentOutOfRangeException>(() => w.Spawn(p.Find(w.Content, "vehicle_garage")!, new Cell(5, 5), 0, 1)); // a factory
+        var ws = Arena.NewSentinel(64); // an airfield's factory (any other factory may turn since BUILD-ROTATE)
+        Assert.Throws<ArgumentOutOfRangeException>(() => ws.Spawn(ws.Player(1)!.Setup.Find(ws.Content, "forward_airbase_hut")!, new Cell(5, 5), 0, 1));
         Assert.Throws<ArgumentOutOfRangeException>(() => w.Spawn(p.Find(w.Content, "tunnel_large")!, new Cell(5, 5), 0, 2)); // turns by its facing
         Assert.Throws<ArgumentOutOfRangeException>(() => w.Spawn(p.Find(w.Content, "Rifleman")!, new Cell(5, 5), 0, 1));
         Assert.Empty(w.Units);

@@ -210,6 +210,24 @@ public class FactoryRotationTests
         }
     }
 
+    [Theory]
+    [InlineData(0, 0)]
+    [InlineData(Facing.East, 1)]
+    [InlineData(Facing.South, 2)]
+    [InlineData(Facing.West, 3)]
+    public void ASandboxSpawnTurnsAFactoryByItsFacing(int facing, int quarter)
+    {
+        var w = Arena.New(64, edit: s => s with { Scenario = SimCore.Scenarios.Scenario.SandboxName });
+        w.Issue(new Command { Tick = w.Tick, Player = 1, Kind = CommandKind.SandboxSpawn, Unit = "vehicle_garage", Cell = new Cell(20, 20), Facing = facing });
+        w.Step();
+        var g = Assert.Single(w.Units, u => u.Def.Archetype.Id == "vehicle_garage");
+        Assert.Equal(quarter, g.Quarter);
+        if (quarter != 0)
+        {
+            Assert.Equal(new Cell(20, 20), World.FootprintOrigin(g)); // exactly where asked, its footprint as it stands
+        }
+    }
+
     [Fact]
     public void TurnedFactoriesProduceDeterministically()
     {
